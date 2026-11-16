@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+.test-data/
+.ruff_cache/
+data/
+
+# Local IDE settings and generated verification artifacts
+.idea/
+audit/
+
+# Local development review notes
+/IMPLEMENTATION_REVIEW.md
+/REFACTOR_REVIEW.md

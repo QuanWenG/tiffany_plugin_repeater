@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tiffany · 语料观察台</title>
+<style>
+:root{color-scheme:dark;font:15px system-ui;background:#10191d;color:#e0eaea}body{max-width:1200px;margin:40px auto;padding:0 24px}h1{font-size:25px}p{color:#a4b6bc}button,input,select{font:inherit;padding:9px 12px;border:1px solid #37515b;border-radius:6px;background:#17282e;color:inherit}button{cursor:pointer}button:hover{border-color:#84d2cd}form,nav,.tools{display:flex;gap:10px;flex-wrap:wrap;margin:20px 0}input{min-width:160px}table{border-collapse:collapse;width:100%;font-size:13px}td,th{text-align:left;vertical-align:top;padding:12px;border-bottom:1px solid #30424a;overflow-wrap:anywhere;max-width:400px}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#17282e;padding:20px;border-radius:8px}#error{color:#ffaaaa}#summary{color:#9ce0d4}a{color:#9ce0d4}.scroll{overflow:auto}label{display:flex;gap:8px;align-items:center}
+th{white-space:nowrap}td{min-width:64px}td button{white-space:nowrap}
+</style>
+<h1>Tiffany · 语料观察台</h1><p>查看聊天证据、相近表达、每次接话的依据及收到的群友互动。</p>
+<form id="login"><input id="token" type="password" placeholder="访问令牌" autocomplete="off" required><button>连接</button></form>
+<nav id="nav"></nav>
+<form id="filters"><input id="text" placeholder="句子或关键词"><select id="mode"><option value="contains">包含匹配</option><option value="exact">完整文本</option></select><input id="group" placeholder="群标识（完整值）"><input id="author" placeholder="发言人 ID"><select id="media"><option value="">全部内容</option><option value="text">纯文本</option><option value="media">含图片或表情</option></select><label>起始<input id="since" type="datetime-local"></label><label>截止<input id="until" type="datetime-local"></label><button>查询</button></form>
+<p id="error" role="alert"></p><p id="summary"></p><div id="output" class="scroll"></div><div class="tools"><button id="prev">上一页</button><button id="next">下一页</button><button id="refresh">刷新</button></div><pre id="detail" hidden></pre>
+<p>统计仅覆盖当前保留的数据；现存来源记录不代表某次回复的唯一出处。令牌仅保留在本页内存中。</p>
+<script>
+let token='',view='overview',page=1,pages=1,busy=false,serial=0;
+const $=id=>document.getElementById(id), labels={overview:'运行概览',messages:'语料查询',relations:'原接话关系',evidence:'聊天证据',neighbors:'相近表达',decisions:'回答与依据',feedback:'群友互动',sent:'发送记录',groups:'群监控'};
+for(const [key,name] of Object.entries(labels)){const b=document.createElement('button');b.textContent=name;b.onclick=()=>{view=key;page=1;load()};$('nav').append(b)}
+async function api(path){const r=await fetch('/api/'+path,{headers:{Authorization:'Bearer '+token}});if(!r.ok)throw Error(await r.text());return r.json()}
+function node(tag,text){const n=document.createElement(tag);n.textContent=text;return n}
+const titles={id:'记录',group_key:'群标识',created:'时间',updated:'更新时间',content:'内容',trigger:'触发前文',source_content:'来源表达',target_content:'相近表达',source:'来源',similarity:'相似度',author:'作者',actor:'参与者',kind:'互动类型',active:'仍有效',eligible:'观察窗内',participants:'参与人数',reward:'互动分',probability:'选中概率',status:'发送状态',mode:'方式',observable:'观察完整',settled:'已结算',deadline:'观察截止'};
+async function showDetail(table,id){try{const d=await api('detail?'+new URLSearchParams({table,id}));$('detail').textContent=JSON.stringify(d,null,2);$('detail').hidden=false}catch(e){$('error').textContent=e.message}}
+async function load(){
+  if(!token)return;
+  const request=++serial,requestedView=view;busy=true;$('error').textContent='';
+  try{
+    const q=new URLSearchParams({page});
+    for(const id of ['text','mode','group','author','media'])if($(id).value)q.set(id,$(id).value);
+    for(const id of ['since','until'])if($(id).value)q.set(id,String(new Date($(id).value).getTime()/1000));
+    const data=await api(requestedView+'?'+q);if(request!==serial)return;
+    $('output').replaceChildren();$('detail').hidden=true;
+    if(requestedView==='overview'){
+      $('output').append(node('pre',JSON.stringify(data,null,2)));
+      $('summary').textContent='运行概览每 15 秒刷新；互动统计按发送方式和观察完整性区分';pages=1;return;
+    }
+    pages=data.pages;$('summary').textContent=`${labels[requestedView]} · 共 ${data.total} 条 · 第 ${page}/${pages} 页`;
+    const table=document.createElement('table');
+    const hidden=['content_key','signature','namespace','answer_key','raw_answer_key','trigger_key','previous_key','episode_id','policy_version','data_version','epoch','revision','event_key','target_id','segment','rule_version','reply_target','evidence'];
+    const columns=[...new Set(data.rows.flatMap(r=>Object.keys(r)))].filter(k=>!hidden.includes(k));
+    const head=document.createElement('tr');for(const c of columns)head.append(node('th',titles[c]||c));table.append(head);
+    for(const row of data.rows){
+      const tr=document.createElement('tr');
+      for(const c of columns){
+        let value=row[c];
+        if(value&&typeof value==='object'&&'text' in value)value=value.text||'['+value.categories.join(' / ')+']';
+        if(['created','updated','deadline'].includes(c))value=new Date(value*1000).toLocaleString();
+        if(c==='probability'&&typeof value==='number')value=(value*100).toFixed(2)+'%';
+        const td=node('td',typeof value==='object'?JSON.stringify(value):String(value??''));
+        if(['status','mode','source','probability'].includes(c))td.style.whiteSpace='nowrap';
+        const details={messages:'messages',sent:'sent',evidence:'learning_evidence',decisions:'reply_episodes',feedback:'reply_episodes'};
+        if(c==='id'&&details[requestedView]){
+          const id=requestedView==='feedback'?row.episode_id:row.id;
+          const b=node('button','查看依据');b.onclick=()=>showDetail(details[requestedView],id);td.replaceChildren(b);
+        }
+        tr.append(td);
+      }
+      table.append(tr);
+    }
+    $('output').append(table);
+  }catch(e){if(request===serial)$('error').textContent=e.message}
+  finally{if(request===serial)busy=false}
+}
+$('login').onsubmit=e=>{e.preventDefault();token=$('token').value;$('token').value='';load()};$('filters').onsubmit=e=>{e.preventDefault();page=1;load()};$('prev').onclick=()=>{if(page>1){page--;load()}};$('next').onclick=()=>{if(page<pages){page++;load()}};$('refresh').onclick=load;setInterval(()=>{if(view==='overview'&&!busy&&!document.hidden)load()},15000);
+</script></html>

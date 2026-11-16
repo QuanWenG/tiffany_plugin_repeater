@@ -1,0 +1,61 @@
+# 首次正式启动会自动生成 Tiffany data/config/repeater.toml；也可手动复制本示例。
+# 已有配置不会覆盖，修改后重启；使用 --home 或 TIFFANY_HOME 时跟随对应 home。
+enabled = true
+enabled_default = true
+
+# OneBot 可读取群主/管理员角色；QQ 官方使用这里的 OpenID 或 Tiffany permissions。
+admin_ids = []
+allow_group_admin = true
+# 忽略对方机器人，不学习、不触发接话；OneBot 示例：["222222"]。
+ignored_user_ids = []
+drink_admin_only = false
+command_prefix = "/"
+
+min_text_length = 2
+max_text_length = 120
+answer_threshold = 3
+answer_weights = [7, 23, 70]
+cross_group_threshold = 2
+repeat_threshold = 3
+topics_size = 16
+duplicate_window = 10
+
+cooldown_seconds = 5
+# 普通接话在此区间内随机等待，单位秒；两个机器人可设置不同区间。
+# 活跃的/话痨的预设会缩短等待；喝酒时延迟最多约 1～2 秒。
+delay_min_seconds = 2
+delay_max_seconds = 5
+burst_window_seconds = 180
+burst_limit = 3
+
+# 主动发言的检查周期和基础沉默时长，单位秒；多个实例可分别配置以错开时间。
+proactive_interval_seconds = 60
+proactive_delay_seconds = 600
+proactive_activity_factor = 5
+proactive_recent_messages = 100
+
+multimodal_enabled = true
+max_media_segments = 4
+max_image_bytes = 10485760
+media_timeout_seconds = 15
+drunk_duration_seconds = 300
+# 龟龟闭嘴：默认静音 30 分钟；龟龟说话可提前解除，单位秒。
+mute_duration_seconds = 1800
+max_messages_per_group = 10000
+stale_relation_days = 90
+max_pending_sends = 256
+max_storage_operations = 128
+
+# auto：证据达标后自动选句；observe：只计算和观察；off：使用原检索。
+intelligence_mode = "auto"
+evidence_retention_days = 90
+max_evidence_per_group = 20000
+feedback_window_seconds = 1800
+feedback_retention_days = 30
+max_reply_episodes_per_group = 5000
+
+# 观察台只监听本机；开启前设置至少 16 字符的访问令牌。
+dashboard_enabled = false
+dashboard_host = "127.0.0.1"
+dashboard_port = 9470
+dashboard_token = ""

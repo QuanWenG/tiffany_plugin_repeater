@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tiffany-plugin-repeater"
+version = "0.3.1"
+description = "Native learning and multimodal repeater for Tiffany"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "AGPL-3.0-only"
+license-files = ["LICENSE"]
+dependencies = ["tiffany-hook-runtime>=0.1,<0.2", "aiohttp>=3.11,<4", "jieba>=0.42.1"]
+
+[project.entry-points."tiffany.plugins"]
+repeater = "tiffany_plugin_repeater:install"
+
+[tool.tiffany.plugin]
+api = 1
+requires = []
+
+[tool.setuptools.packages.find]
+include = ["tiffany_plugin_repeater*"]
+
+[tool.setuptools.package-data]
+tiffany_plugin_repeater = ["web/*.html"]
